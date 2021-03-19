@@ -56,6 +56,9 @@ OB3_Y:	.space	24
 OB3_X:	.space	24
 OB3_SIZE: .word 6
 
+HIT_SCREEN_RIGHT:	.word	0
+HIT_SCREEN_UP:	.word	0
+
 #OB4:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
 #OB4_Y:	.space	20
 #OB4_X:	.space	20
@@ -69,6 +72,7 @@ OB3_SIZE: .word 6
 
 
 .eqv BASE_ADDRESS 0x10008000
+.eqv KEYBOARD_ADDRESS 0xffff0000
 .eqv WIDTH 32
 .eqv BLACK 0x00000000
 
@@ -87,13 +91,63 @@ draw_obj:
 	beq $a0, $t9, DRAW_ELSE_IF_2
 	li $t9, 2
 	beq $a0, $t9, DRAW_ELSE_IF_3
-	li $t9, 3
-	beq $a0, $t9, DRAW_ELSE_IF_4
-	li $t9, 4
-	beq $a0, $t9, DRAW_ELSE_IF_5
+	#li $t9, 3
+	#beq $a0, $t9, DRAW_ELSE_IF_4
+	#li $t9, 4
+	#beq $a0, $t9, DRAW_ELSE_IF_5
 	
 	
+
 	#Draw SHIP#
+	
+	la $s1, SHIP #Load SHIP address into $s1#
+	
+	#Get base address of SHIP_X, SHIP_Y#
+	la $s2, SHIP_X
+	la $s3, SHIP_Y
+	
+	#Get address and value of SHIP_SIZE#
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP:
+	
+	beq $t8, $t9, END_DRAW_LOOP
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	add $s6, $s3, $t1 #Offset for SHIP_Y#
+	add $s7, $s1, $t1 #Offset for SHIP#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of SHIP into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP
+	
+END_DRAW_LOOP:
+	
+	jr $ra
+	
 
 #Draw OB1#
 DRAW_ELSE_IF_1:
@@ -245,10 +299,10 @@ END_DRAW_LOOP3:
 	jr $ra
 	
 #Draw OB4#
-DRAW_ELSE_IF_4:
+#DRAW_ELSE_IF_4:
 
 #Draw OB5#
-DRAW_ELSE_IF_5:	
+#DRAW_ELSE_IF_5:	
 
 	jr $ra
 
@@ -271,11 +325,60 @@ erase_obj:
 	
 	
 	#Erase SHIP#
+	
+	la $s1, SHIP #Load SHIP address into $s1#
+	
+	#Get base address of SHIP_X, SHIP_Y#
+	la $s2, SHIP_X
+	la $s3, SHIP_Y
+	
+	#Get address and value of SHIP_SIZE #
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP:	
+
+	beq $t8, $t9, END_ERASE_LOOP
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	add $s6, $s3, $t1 #Offset for SHIP_Y#
+	add $s7, $s1, $t1 #Offset for SHIP#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of SHIP[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP
+
+END_ERASE_LOOP:
+	jr $ra
 
 #Erase OBSTACLES#
 
 #Erase OB1#
 ERA_ELSE_IF_1:
+	
+	la $s1, OB1
 	
 	#Get base address of OB1_X, OB1_Y#
 	la $s2, OB1_X
@@ -324,6 +427,9 @@ END_ERASE_LOOP1:
 
 #Erase OB2#
 ERA_ELSE_IF_2:
+	
+	la $s1, OB2
+
 	#Get base address of OB2_X, OB2_Y#
 	la $s2, OB2_X
 	la $s3, OB2_Y
@@ -371,6 +477,9 @@ END_ERASE_LOOP2:
 
 #Erase OB3#
 ERA_ELSE_IF_3:
+
+	la $s1, OB3
+	
 	#Get base address of OB3_X, OB3_Y#
 	la $s2, OB3_X
 	la $s3, OB3_Y
@@ -508,9 +617,6 @@ MOVE_LOOP3:
 
 END_MOVE_LOOP3:
 
-
-
-
 	jr $ra
 	
 #__________FUNCTION__________#
@@ -528,6 +634,7 @@ set_coord:
 	#beq $a1, $t9, SET_ELSE_IF_4
 	#li $t9, 4
 	#beq $a1, $t9, SET_ELSE_IF_5
+
 	
 SET_ELSE_IF_1:
 #Set coordinates for OB1#
@@ -661,28 +768,229 @@ SET_ELSE_IF_3:
 
 
 #__________FUNCTION__________#
+#moves ship in direction of keyboard input#
+#takes in $a0 to deterine the keypress and direction#
+move_ship:
+
+	#Determine Direction#
+	li $t9, 0 #0 means 'a' is pressed#
+	beq $a0, $t9, MOVE_SHIP_LEFT
+	li $t9, 1
+	beq $a0, $t9, MOVE_SHIP_DOWN
+	li $t9, 2
+	beq $a0, $t9, MOVE_SHIP_RIGHT
+	li $t9, 3
+	beq $a0, $t9, MOVE_SHIP_UP
+
+
+MOVE_SHIP_LEFT:
+	la $s2, SHIP_X #Get base address of SHIP_X#
+	
+	#Get address and value of SHIP_SIZE #
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_SHIP_LOOP1:	
+	
+	beq $t8, $t9, END_MOVE_SHIP_LOOP1
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -1 #Moves at -1 units fast#
+	lw $t3, 20($s2) #MUST CHECK THE LAST UNIT THAT IS FARTHEST TO THE LEFT#
+	add $t3, $t3, $t2
+	bltz $t3, END_MOVE_SHIP_LOOP1 #Checks to make sure the ship does not go off screen#
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -1 #Moves at -1 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	#bltz $t3, END_MOVE_SHIP_LOOP1 #Checks to make sure the ship does not go off screen#
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_SHIP_LOOP1
+
+END_MOVE_SHIP_LOOP1:
+	
+	#Makes sure that HIT_SCREEN_RIGHT is not more than 1 anymore#
+	la $t4, HIT_SCREEN_RIGHT
+	sw $zero, ($t4)
+	
+	jr $ra
+
+
+MOVE_SHIP_DOWN:
+	la $s2, SHIP_Y #Get base address of SHIP_Y#
+	
+	#Get address and value of SHIP_SIZE #
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_SHIP_LOOP2:	
+	
+	beq $t8, $t9, END_MOVE_SHIP_LOOP2
+	
+	#Calculation to shift unity left by 1#
+	li $t2, 1 #Moves at 1 units fast#
+	lw $t3, 20($s2) #MUST CHECK THE LAST UNIT THAT IS FARTHEST TO THE LEFT#
+	add $t3, $t3, $t2
+	li $t5, 31 #Constant for 31#
+	bgt $t3, $t5, END_MOVE_SHIP_LOOP2 #Checks to make sure the ship does not go off screen#
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, 1 #Moves at 1 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	#bltz $t3, END_MOVE_SHIP_LOOP2 #Checks to make sure the ship does not go off screen#
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_SHIP_LOOP2
+
+END_MOVE_SHIP_LOOP2:
+	
+	la $t2, HIT_SCREEN_UP
+	sw $zero, ($t2)
+	
+	jr $ra
+	
+	
+MOVE_SHIP_RIGHT:
+	la $s2, SHIP_X #Get base address of SHIP_X#
+	
+	#Get address and value of SHIP_SIZE #
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_SHIP_LOOP3:	
+	
+	beq $t8, $t9, END_MOVE_SHIP_LOOP3
+	
+	#Calculation to shift unity left by 1#
+	li $t2, 1 #Moves at 1 units fast#
+	lw $t3, 12($s2) #MUST CHECK THE UNIT THAT IS FARTHEST TO THE RIGHT#
+	add $t3, $t3, $t2
+	li $t5, 31
+	bgt $t3, $t5, FILL_REMAINDER1 #Checks to make sure the ship does not go off screen#
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, 1 #Moves at 1 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	#bltz $t3, END_MOVE_SHIP_LOOP1 #Checks to make sure the ship does not go off screen#
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_SHIP_LOOP3
+
+FILL_REMAINDER1:
+
+	la $t4, HIT_SCREEN_RIGHT #Checks if this is the first time right side is outside#
+	lw $t5, ($t4)
+	
+	beq $t5, 1, END_MOVE_SHIP_LOOP3 #If it is not the first time then don't execute this code#
+	
+	#Calculate movement of unit but stores it directly into the units#
+	li $t2, 1 #Moves at 1 units fast#
+	lw $t3, 16($s2)
+	add $t3, $t3, $t2
+	sw $t3, 16($s2)
+	lw $t3, 20($s2)
+	add $t3, $t3, $t2
+	sw $t3, 20($s2)
+	
+	sw $t2, ($t4) #Record that the right screen has been hit more than once#
+	
+	j END_MOVE_SHIP_LOOP3
+	
+
+END_MOVE_SHIP_LOOP3:
+	
+	jr $ra
+
+
+MOVE_SHIP_UP:
+	la $s2, SHIP_Y #Get base address of SHIP_Y#
+	
+	#Get address and value of SHIP_SIZE #
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_SHIP_LOOP4:	
+	
+	beq $t8, $t9, END_MOVE_SHIP_LOOP4
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -1 #Moves at -1 units fast#
+	lw $t3, 16($s2) #MUST CHECK THE LAST UNIT THAT IS FARTHEST TO THE LEFT#
+	add $t3, $t3, $t2
+	bltz $t3, FILL_REMAINDER2 #Checks to make sure the ship does not go off screen#
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -1 #Moves at -1 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	#bltz $t3, END_MOVE_SHIP_LOOP1 #Checks to make sure the ship does not go off screen#
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_SHIP_LOOP4
+
+FILL_REMAINDER2:
+	
+	la $t4, HIT_SCREEN_UP #Checks if this is the first side top of ship is outside#
+	lw $t5, ($t4)
+	
+	beq $t5, 1, END_MOVE_SHIP_LOOP4 #If it is not then don't execute this code#
+	
+	li $t2, -1
+	lw $t3 20($s2)
+	add $t3, $t2, $t3
+	sw $t3, 20($s2)
+	
+	li $t7, 1
+	sw $t7, ($t4)
+
+END_MOVE_SHIP_LOOP4:
+	
+	jr $ra
+
+#__________FUNCTION__________#
 main:
 	#Setup for framebuffer
 	li $t0, BASE_ADDRESS # $t0 stores the base address for display
 	
 	#Initialize and Draw Spaceship#		
-	la $t1, SHIP #Load address of A#
-	
-	lw $t2, ($t1) #load colour value of A[0] into $t1#
-	lw $t3, 4($t1)
-	lw $t4, 8($t1)
-	lw $t5, 12($t1)
-	lw $t6, 16($t1)
-	lw $t7, 20($t1)
-	
-	
-	sw $t2, 1812($t0) #write colour value of A[0] into ($t0 + 0)#
-	sw $t3, 1940($t0) 
-	sw $t4, 2068($t0)
-	sw $t5, 1944($t0)
-	sw $t6, 1808($t0)
-	sw $t7, 2064($t0)
-	
+	li $a0, 5
+	jal draw_obj
 	
 	#--Initialize and Draw OB1--#
 	#Random Number Generation#
@@ -727,7 +1035,71 @@ main:
 	
 
 game_loop:	
+
+#Erase Ship#
+	li $a0, 5
+	jal erase_obj
+
+#Listen for keyboard#
+	li $t9, KEYBOARD_ADDRESS
+	lw $t8, ($t9)
+	beq $t8, $zero, nothing_pressed
 	
+	#Key was pressed#
+	
+	#Check for 'a' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x61, respond_to_a
+	
+	#Check for 's' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x73, respond_to_s
+	
+	#Check for 'd' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x64, respond_to_d
+	
+	#Check for 'w' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x77, respond_to_w
+	
+	#No mapped keys were pressed#
+	j nothing_pressed
+
+respond_to_a:
+	#move ship#
+	li $a0, 0
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_s:
+	#move ship#
+	li $a0, 1
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_d:
+	#move ship#
+	li $a0, 2
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_w:
+	#move ship#
+	li $a0, 3
+	jal move_ship
+	
+	j nothing_pressed
+
+nothing_pressed:
+
+	#Draw Ship#
+	li $a0, 5
+	jal draw_obj
+
 #Erase Obstacle#
 
 	#Erase OB1#
