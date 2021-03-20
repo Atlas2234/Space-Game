@@ -35,7 +35,8 @@
 
 .data
 
-SHIP:	.word	 0xff0000, 0xff0000, 0xff0000, 0xff0000, 0xdddd00, 0xeedd00
+SHIP:	.word	 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffaa00, 0xffaa00
+SHIP_HIT:	.word	0xff0000, 0xff0000, 0xff0000, 0xff0000, 0xff0000, 0xff0000
 SHIP_Y:	.word	15, 14, 16, 15, 14, 16
 SHIP_X:	.word	5, 5, 5, 6, 4, 4
 SHIP_SIZE: .word 6
@@ -58,6 +59,8 @@ OB3_SIZE: .word 6
 
 HIT_SCREEN_RIGHT:	.word	0
 HIT_SCREEN_UP:	.word	0
+
+NUM_COLLISION:	.word	0
 
 #OB4:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
 #OB4_Y:	.space	20
@@ -95,10 +98,12 @@ draw_obj:
 	#beq $a0, $t9, DRAW_ELSE_IF_4
 	#li $t9, 4
 	#beq $a0, $t9, DRAW_ELSE_IF_5
-	
+	li $t9, 6
+	beq $a0, $t9, DRAW_ELSE_IF_6
 	
 
 	#Draw SHIP#
+	#Only occurs when $a0 is 5#
 	
 	la $s1, SHIP #Load SHIP address into $s1#
 	
@@ -302,8 +307,56 @@ END_DRAW_LOOP3:
 #DRAW_ELSE_IF_4:
 
 #Draw OB5#
-#DRAW_ELSE_IF_5:	
+#DRAW_ELSE_IF_5:
 
+#Draw SHIP_HIT#
+DRAW_ELSE_IF_6:	
+	la $s1, SHIP_HIT #Load SHIP_HIT address into $s1#
+	
+	#Get base address of SHIP_X, SHIP_Y#
+	la $s2, SHIP_X
+	la $s3, SHIP_Y
+	
+	#Get address and value of SHIP_SIZE#
+	la $t9, SHIP_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP6:
+	
+	beq $t8, $t9, END_DRAW_LOOP6
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	add $s6, $s3, $t1 #Offset for SHIP_Y#
+	add $s7, $s1, $t1 #Offset for SHIP#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of SHIP into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP6
+	
+END_DRAW_LOOP6:
+	
 	jr $ra
 
 
@@ -322,10 +375,11 @@ erase_obj:
 	#beq $a0, $t9, ERA_ELSE_IF_4
 	#li $t9, 4
 	#beq $a0, $t9, ERA_ELSE_IF_5
-	
+	#li $t9, 6
+	#beq $a0, $t9, ERA_ELSE_IF_6
 	
 	#Erase SHIP#
-	
+	#only occurs when $a0 is 5#
 	la $s1, SHIP #Load SHIP address into $s1#
 	
 	#Get base address of SHIP_X, SHIP_Y#
@@ -349,7 +403,7 @@ ERASE_LOOP:
 	
 	lw $t2, ($s5) #puts X value into $t2#
 	lw $t3, ($s6) #puts Y value into $t3#
-	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	lw $s0, ($s7) #load colour value of SHIP into $s0#
 	#Set Constant#
 	li $t4, WIDTH
 	li $t5, 4
@@ -523,8 +577,10 @@ ERASE_LOOP3:
 	j ERASE_LOOP3
 
 END_ERASE_LOOP3:
+	
 	jr $ra
-
+	
+	
 #__________FUNCTION__________#
 move_left:
 #Shifts obstacles to the left one unit#
@@ -605,7 +661,7 @@ MOVE_LOOP3:
 	add $s5, $s2, $t1 #Offset for OB3_X#
 	
 	#Calculation to shift unity left by 1#
-	li $t2, -2 #Moves at -1 units fast#
+	li $t2, -2 #Moves at -2 units fast#
 	lw $t3, ($s5)
 	add $t3, $t3, $t2
 	
@@ -984,6 +1040,178 @@ END_MOVE_SHIP_LOOP4:
 	jr $ra
 
 #__________FUNCTION__________#
+#checks for collision between obstacles#
+#returns 1 for $v0 if there is a collision#
+#returns 0 for $v0 if there is not a collision#
+check_collision:
+	#Load base address of SHIP_X and SHIP_Y#
+	la $t1, SHIP_X
+	la $t2, SHIP_Y
+	la $t8, SHIP_SIZE
+	lw $t8, ($t8)
+	
+	#Check collision with OB1#
+	la $t3, OB1_X
+	la $t4, OB1_Y
+	la $t9, OB1_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+COLLISION_LOOP1:
+	beq $s0, $t8, END_OF_COLLISION_LOOP1
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_COLLISION_LOOP1:
+	beq $s1, $t9, END_OF_INNER_COLLISION_LOOP1
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_HIT 
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_HIT
+	
+	li $v0, 1
+	
+	jr $ra
+	
+NO_HIT:
+	addi $s1, $s1, 1 
+	j INNER_COLLISION_LOOP1
+	
+
+END_OF_INNER_COLLISION_LOOP1:
+	
+	addi $s0, $s0, 1 
+	j COLLISION_LOOP1
+	
+END_OF_COLLISION_LOOP1:
+
+	#Check collision with OB2#
+	la $t3, OB2_X
+	la $t4, OB2_Y
+	la $t9, OB2_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+COLLISION_LOOP2:
+	beq $s0, $t8, END_OF_COLLISION_LOOP2
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_COLLISION_LOOP2:
+	beq $s1, $t9, END_OF_INNER_COLLISION_LOOP2
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB2_X#
+	add $s7, $s3, $t4 #Offset for OB2_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_HIT2
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_HIT2	
+	
+	li $v0, 1
+	
+	jr $ra
+	
+NO_HIT2:
+	addi $s1, $s1, 1 
+	j INNER_COLLISION_LOOP2
+	
+
+END_OF_INNER_COLLISION_LOOP2:
+	
+	addi $s0, $s0, 1 
+	j COLLISION_LOOP2
+	
+END_OF_COLLISION_LOOP2:
+	
+	#Check collision with OB3#
+	la $t3, OB3_X
+	la $t4, OB3_Y
+	la $t9, OB3_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+COLLISION_LOOP3:
+	beq $s0, $t8, END_OF_COLLISION_LOOP3
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_COLLISION_LOOP3:
+	beq $s1, $t9, END_OF_INNER_COLLISION_LOOP3
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB3_X#
+	add $s7, $s3, $t4 #Offset for OB3_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_HIT3
+	
+	#Check ship y and ob3 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_HIT3
+	
+	li $v0, 1
+	
+	jr $ra
+	
+NO_HIT3:
+	addi $s1, $s1, 1 
+	j INNER_COLLISION_LOOP3
+	
+
+END_OF_INNER_COLLISION_LOOP3:
+	
+	addi $s0, $s0, 1 
+	j COLLISION_LOOP3
+	
+END_OF_COLLISION_LOOP3:	
+	
+	li $v0, 0
+	jr $ra
+	
+	
+
+#__________FUNCTION__________#
 main:
 	#Setup for framebuffer
 	li $t0, BASE_ADDRESS # $t0 stores the base address for display
@@ -1015,6 +1243,7 @@ main:
 	#Set rest of coordinates from random Y#
 	li $a1, 1
 	jal set_coord
+	
 	#Draw OB2#
 	li $a0, 1
 	jal draw_obj
@@ -1035,70 +1264,6 @@ main:
 	
 
 game_loop:	
-
-#Erase Ship#
-	li $a0, 5
-	jal erase_obj
-
-#Listen for keyboard#
-	li $t9, KEYBOARD_ADDRESS
-	lw $t8, ($t9)
-	beq $t8, $zero, nothing_pressed
-	
-	#Key was pressed#
-	
-	#Check for 'a' press#
-	lw $t1, 4($t9)
-	beq $t1, 0x61, respond_to_a
-	
-	#Check for 's' press#
-	lw $t1, 4($t9)
-	beq $t1, 0x73, respond_to_s
-	
-	#Check for 'd' press#
-	lw $t1, 4($t9)
-	beq $t1, 0x64, respond_to_d
-	
-	#Check for 'w' press#
-	lw $t1, 4($t9)
-	beq $t1, 0x77, respond_to_w
-	
-	#No mapped keys were pressed#
-	j nothing_pressed
-
-respond_to_a:
-	#move ship#
-	li $a0, 0
-	jal move_ship
-	
-	j nothing_pressed
-
-respond_to_s:
-	#move ship#
-	li $a0, 1
-	jal move_ship
-	
-	j nothing_pressed
-
-respond_to_d:
-	#move ship#
-	li $a0, 2
-	jal move_ship
-	
-	j nothing_pressed
-
-respond_to_w:
-	#move ship#
-	li $a0, 3
-	jal move_ship
-	
-	j nothing_pressed
-
-nothing_pressed:
-
-	#Draw Ship#
-	li $a0, 5
-	jal draw_obj
 
 #Erase Obstacle#
 
@@ -1184,6 +1349,93 @@ check3_end:
 	li $a0, 2
 	jal draw_obj		
 
+
+#Erase Ship#
+	li $a0, 5
+	jal erase_obj
+
+#Listen for keyboard#
+	li $t9, KEYBOARD_ADDRESS
+	lw $t8, ($t9)
+	beq $t8, $zero, nothing_pressed
+	
+	#Key was pressed#
+	
+	#Check for 'a' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x61, respond_to_a
+	
+	#Check for 's' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x73, respond_to_s
+	
+	#Check for 'd' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x64, respond_to_d
+	
+	#Check for 'w' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x77, respond_to_w
+	
+	#No mapped keys were pressed#
+	j nothing_pressed
+
+respond_to_a:
+	#move ship#
+	li $a0, 0
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_s:
+	#move ship#
+	li $a0, 1
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_d:
+	#move ship#
+	li $a0, 2
+	jal move_ship
+	
+	j nothing_pressed
+
+respond_to_w:
+	#move ship#
+	li $a0, 3
+	jal move_ship
+	
+	j nothing_pressed
+
+nothing_pressed:
+
+	#Draw Ship#
+	li $a0, 5
+	jal draw_obj
+
+#Check for collisions#
+	
+	jal check_collision
+	
+	bne $v0, 1, SAFE
+	
+	#This only executes if $v0 is 1#
+	la $t1, NUM_COLLISION #Get address of collision#
+	lw $t3, ($t1) #Get value of num_collision#
+	add $t2, $t3, 1 #iterate by 1#
+	sw $t2, ($t1) #store value back#
+	
+	#Erase SHIP#
+	li $a0, 5
+	jal erase_obj
+	
+	#Draw SHIP_HIT#
+	li $a0, 6
+	jal draw_obj
+	
+	
+SAFE:
 
 
 #sleep#
