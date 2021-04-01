@@ -60,7 +60,61 @@ OB3_SIZE: .word 6
 HIT_SCREEN_RIGHT:	.word	0
 HIT_SCREEN_UP:	.word	0
 
-NUM_COLLISION:	.word	0
+
+
+HEALTH_BAR_BACKGROUND:	.word	0xff0011, 0xff0011, 0xff0011, 0xff0011, 0xff0011, 0xff0011, 0xff0011
+HEALTH_BAR_SIZE:	.word	7
+
+HEALTH_BAR:	.word	0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00
+NUM_COLLISION:	.word	7
+
+
+HEALTH_X:	.word	12, 13, 14, 15, 16, 17, 18
+HEALTH_Y:	.word	29, 29, 29, 29, 29, 29, 29
+
+
+COUNTER:	.word	0
+
+
+G_COLOR:	.word	0xffffff
+G_SIZE:	.word	16
+G_X:	.word	8, 7, 6, 5, 4, 4, 4, 4, 4, 5, 6, 7, 8, 8, 8, 7
+G_Y:	.word	6, 6, 6, 6, 6, 7, 8, 9, 10, 10, 10, 10, 10, 9, 8, 8
+
+A_COLOR:	.word	0xffffff
+A_SIZE:	.word	14
+A_X:	.word	11, 11, 11, 11, 11, 12, 13, 12, 13, 14, 14, 14, 14, 14
+A_Y:	.word	10, 9, 8, 7, 6, 6, 6, 8, 8, 6, 7, 8, 9, 10
+
+M_COLOR:	.word	0xffffff
+M_SIZE:	.word	13
+M_X:	.word	17, 17, 17, 17, 17, 21, 21, 21, 21, 21, 18, 19, 20
+M_Y: .word	10, 9, 8, 7, 6, 10, 9, 8, 7, 6, 7, 8, 7
+
+E_COLOR:	.word	0xffffff
+E_SIZE:	.word	14
+E_X:	.word	24, 24, 24, 24, 24, 25, 26, 27, 25, 26, 27, 25, 26, 27
+E_Y:	.word	10, 9, 8, 7, 6, 6, 6, 6, 8, 8, 8, 10, 10, 10
+
+O_COLOR:	.word	0xffffff
+O_SIZE:	.word	14
+O_X:	.word	8, 8, 8, 8, 8, 9, 10, 11, 9, 10, 11, 11, 11, 11
+O_Y:	.word	17, 16, 15, 14, 13, 13, 13, 13, 17, 17, 17, 14, 15, 16
+
+V_COLOR:	.word	0xffffff
+V_SIZE:	.word	9
+V_X:	.word	14, 14, 14, 15, 16, 17, 18, 18, 18
+V_Y:	.word	13, 14, 15, 16, 17, 16, 15, 14, 13
+
+e_COLOR:	.word	0xffffff
+e_X:	.word	21, 22, 23, 24, 21, 21, 22, 23, 24, 21, 21, 22, 23, 24
+e_Y:	.word	13, 13, 13, 13, 14, 15, 15, 15, 15, 16, 17, 17, 17, 17
+
+R_COLOR:	.word	0xffffff
+R_SIZE:	.word 15
+R_X:	.word	27, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30
+R_Y:	.word	17, 16, 15, 14, 13, 15, 13, 17, 16, 15, 13, 17, 15, 14, 13
+
 
 #OB4:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
 #OB4_Y:	.space	20
@@ -100,7 +154,12 @@ draw_obj:
 	#beq $a0, $t9, DRAW_ELSE_IF_5
 	li $t9, 6
 	beq $a0, $t9, DRAW_ELSE_IF_6
-	
+	li $t9, 7
+	beq $a0, $t9, DRAW_ELSE_IF_7
+	li $t9, 8
+	beq $a0, $t9, DRAW_ELSE_IF_8
+	li $t9, 9
+	beq $a0, $t9, DRAW_ELSE_IF_9
 
 	#Draw SHIP#
 	#Only occurs when $a0 is 5#
@@ -358,8 +417,477 @@ DRAW_LOOP6:
 END_DRAW_LOOP6:
 	
 	jr $ra
+	
+	
+#Draw Background of Health Bar#
+DRAW_ELSE_IF_7:
+
+	la $s1, HEALTH_BAR_BACKGROUND #Load background of health bar address into $s1#
+	
+	#Get base address of HEALTH_X, HEALTH_Y#
+	la $s2, HEALTH_X
+	la $s3, HEALTH_Y
+	
+	#Get address and value of HEALTH_BAR_SIZE#
+	la $t9, HEALTH_BAR_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP7:
+	
+	beq $t8, $t9, END_DRAW_LOOP7
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for HEALTH_X#
+	add $s6, $s3, $t1 #Offset for HEALTH_Y#
+	add $s7, $s1, $t1 #Offset for HEALTH_BAR_BACKGROUND#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of HEALTH_BAR_BACKGROUND into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP7
+	
+END_DRAW_LOOP7:
+	
+	jr $ra
 
 
+#Draw Health Bar#
+	
+DRAW_ELSE_IF_8:
+
+	la $s1, HEALTH_BAR #Load health bar address into $s1#
+	
+	#Get base address of HEALTH_X, HEALTH_Y#
+	la $s2, HEALTH_X
+	la $s3, HEALTH_Y
+	
+	#Get address and value of NUM_COLLISION#
+	la $t9, NUM_COLLISION
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP8:
+	
+	beq $t8, $t9, END_DRAW_LOOP8
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for HEALTH_X#
+	add $s6, $s3, $t1 #Offset for HEALTH_Y#
+	add $s7, $s1, $t1 #Offset for HEALTH_BAR#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of HEALTH_BAR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP8
+
+END_DRAW_LOOP8:
+	
+	jr $ra
+
+#Draw GameOver#
+DRAW_ELSE_IF_9:
+
+	la $s1, G_COLOR #Load G_COLOR address into $s1#
+	
+	#Get base address of G_X, G_Y#
+	la $s2, G_X
+	la $s3, G_Y
+	
+	#Get address and value of G_SIZE#
+	la $t9, G_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP9:
+	
+	beq $t8, $t9, END_DRAW_LOOP9
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for G_X#
+	add $s6, $s3, $t1 #Offset for G_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of G_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP9
+	
+END_DRAW_LOOP9:
+	
+	la $s1, A_COLOR #Load A_COLOR address into $s1#
+	
+	#Get base address of A_X, A_Y#
+	la $s2, A_X
+	la $s3, A_Y
+	
+	#Get address and value of A_SIZE#
+	la $t9, A_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP10:
+	
+	beq $t8, $t9, END_DRAW_LOOP10
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for A_X#
+	add $s6, $s3, $t1 #Offset for A_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of A_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP10
+	
+END_DRAW_LOOP10:
+	
+	la $s1, M_COLOR #Load M_COLOR address into $s1#
+	
+	#Get base address of M_X, M_Y#
+	la $s2, M_X
+	la $s3, M_Y
+	
+	#Get address and value of M_SIZE#
+	la $t9, M_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP11:
+	
+	beq $t8, $t9, END_DRAW_LOOP11
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for M_X#
+	add $s6, $s3, $t1 #Offset for M_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of M_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	addu $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP11
+	
+END_DRAW_LOOP11:
+	
+	la $s1, E_COLOR #Load E_COLOR address into $s1#
+	
+	#Get base address of E_X, E_Y#
+	la $s2, E_X
+	la $s3, E_Y
+	
+	#Get address and value of E_SIZE#
+	la $t9, E_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP12:
+	
+	beq $t8, $t9, END_DRAW_LOOP12
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for E_X#
+	add $s6, $s3, $t1 #Offset for E_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of E_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP12
+	
+END_DRAW_LOOP12:
+
+	la $s1, O_COLOR #Load O_COLOR address into $s1#
+	
+	#Get base address of O_X, O_Y#
+	la $s2, O_X
+	la $s3, O_Y
+	
+	#Get address and value of O_SIZE#
+	la $t9, O_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP13:
+	
+	beq $t8, $t9, END_DRAW_LOOP13
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for O_X#
+	add $s6, $s3, $t1 #Offset for O_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of O_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	addu $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP13
+	
+END_DRAW_LOOP13:
+
+	la $s1, V_COLOR #Load V_COLOR address into $s1#
+	
+	#Get base address of G_X, G_Y#
+	la $s2, V_X
+	la $s3, V_Y
+	
+	#Get address and value of V_SIZE#
+	la $t9, V_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP14:
+	
+	beq $t8, $t9, END_DRAW_LOOP14
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for V_X#
+	add $s6, $s3, $t1 #Offset for V_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of V_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	addu $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP14
+	
+END_DRAW_LOOP14:
+
+	la $s1, e_COLOR #Load e_COLOR address into $s1#
+	
+	#Get base address of e_X, e_Y#
+	la $s2, e_X
+	la $s3, e_Y
+	
+	#Get address and value of E_SIZE#
+	la $t9, E_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP15:
+	
+	beq $t8, $t9, END_DRAW_LOOP15
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for e_X#
+	add $s6, $s3, $t1 #Offset for e_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of e_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	addu $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP15
+	
+END_DRAW_LOOP15:
+	
+	la $s1, R_COLOR #Load R_COLOR address into $s1#
+	
+	#Get base address of R_X, R_Y#
+	la $s2, R_X
+	la $s3, R_Y
+	
+	#Get address and value of R_SIZE#
+	la $t9, R_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP16:
+	
+	beq $t8, $t9, END_DRAW_LOOP16
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for R_X#
+	add $s6, $s3, $t1 #Offset for R_Y#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s1) #load colour value of R_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	addu $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP16
+	
+END_DRAW_LOOP16:
+
+	jr $ra
+	
 #__________FUNCTION__________#
 #erase_obj(int a)#
 #erases the obstacle/ship based on which value of a was passed#
@@ -377,6 +905,10 @@ erase_obj:
 	#beq $a0, $t9, ERA_ELSE_IF_5
 	#li $t9, 6
 	#beq $a0, $t9, ERA_ELSE_IF_6
+	li $t9, 8
+	beq $a0, $t9, ERA_ELSE_IF_8
+	li $t9, 9
+	beq $a0, $t9, ERA_ELSE_IF_9
 	
 	#Erase SHIP#
 	#only occurs when $a0 is 5#
@@ -577,6 +1109,109 @@ ERASE_LOOP3:
 	j ERASE_LOOP3
 
 END_ERASE_LOOP3:
+	
+	jr $ra
+
+#Erase Health Bar#
+ERA_ELSE_IF_8:
+
+	la $s1, HEALTH_BAR
+	
+	#Get base address of HEALTH_X, HEALTH_Y#
+	la $s2, HEALTH_X
+	la $s3, HEALTH_Y
+	
+	#Get address and value of NUM_COLLISION #
+	la $t9, NUM_COLLISION
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP8:	
+
+	beq $t8, $t9, END_ERASE_LOOP8
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for HEALTH_X#
+	add $s6, $s3, $t1 #Offset for HEALTH_Y#
+	add $s7, $s1, $t1 #Offset for HEALTH_BAR#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of HEALTH_BAR into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB3[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP8
+
+END_ERASE_LOOP8:
+	
+	jr $ra
+
+
+#Erase Health Bar#
+ERA_ELSE_IF_9:
+
+	la $s1, HEALTH_BAR_BACKGROUND
+	
+	#Get base address of HEALTH_X, HEALTH_Y#
+	la $s2, HEALTH_X
+	la $s3, HEALTH_Y
+	
+	#Get address and value of NUM_COLLISION #
+	la $t9, HEALTH_BAR_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP9:	
+
+	beq $t8, $t9, END_ERASE_LOOP9
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for HEALTH_X#
+	add $s6, $s3, $t1 #Offset for HEALTH_Y#
+	add $s7, $s1, $t1 #Offset for HEALTH_BAR#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of HEALTH_BAR into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB3[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP9
+
+END_ERASE_LOOP9:
 	
 	jr $ra
 	
@@ -1213,10 +1848,59 @@ END_OF_COLLISION_LOOP3:
 
 #__________FUNCTION__________#
 main:
-	#Setup for framebuffer
+	
+start:	
+	#Setup for framebuffer#
 	li $t0, BASE_ADDRESS # $t0 stores the base address for display
 	
-	#Initialize and Draw Spaceship#		
+	
+	#Clear Entire Screen#
+	li $t1, 0x000000 #load black color into $t1
+	add $t2, $t0, $zero #load address of display into $t2
+	li $t3, 4096 #max size of framebuffer
+	li $t4, 0 #i
+clear_loop:
+	beq $t4, $t3, end_clear_loop
+	add $t2, $t0, $t4 # add address of framebuffer by offset i
+	sw $t1, 0($t2)  #store the color black into the address
+	addi $t4, $t4, 4 #iterate i by 4
+	
+	j clear_loop
+	
+end_clear_loop:
+	
+	#Initialize and Draw Spaceship#
+	
+	#Ship X#
+	la $t3, SHIP_X
+	li $t2, 5
+	sw $t2, 0($t3)
+	li $t2, 5
+	sw $t2, 4($t3)
+	li $t2, 5
+	sw $t2, 8($t3)
+	li $t2, 6
+	sw $t2, 12($t3)
+	li $t2, 4
+	sw $t2, 16($t3)
+	li $t2, 4
+	sw $t2, 20($t3)
+	
+	#Reinitialize Ship Y#
+	la $t1, SHIP_Y
+	li $t2, 15
+	sw $t2, 0($t1)
+	li $t2, 14
+	sw $t2, 4($t1)
+	li $t2, 16
+	sw $t2, 8($t1)
+	li $t2, 15
+	sw $t2, 12($t1)
+	li $t2, 14
+	sw $t2, 16($t1)
+	li $t2, 16
+	sw $t2, 20($t1)
+				
 	li $a0, 5
 	jal draw_obj
 	
@@ -1262,6 +1946,19 @@ main:
 	jal draw_obj
 	
 	
+	#--Draw Healthbar Background--#
+	li $a0, 7
+	jal draw_obj
+	
+	#--Draw Healthbar--#
+	li $a0, 8
+	jal draw_obj
+	
+	
+	#--Initialize NUM_COLLISION--#
+	la $t8, NUM_COLLISION #get the address of NUM_COLLISION
+	li $t9, 7
+	sw $t9, 0($t8) #store the value of 7
 
 game_loop:	
 
@@ -1377,6 +2074,10 @@ check3_end:
 	lw $t1, 4($t9)
 	beq $t1, 0x77, respond_to_w
 	
+	#Check for 'p' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x70, respond_to_p
+	
 	#No mapped keys were pressed#
 	j nothing_pressed
 
@@ -1407,6 +2108,10 @@ respond_to_w:
 	jal move_ship
 	
 	j nothing_pressed
+	
+respond_to_p:
+	#Restart game#
+	j start
 
 nothing_pressed:
 
@@ -1423,7 +2128,8 @@ nothing_pressed:
 	#This only executes if $v0 is 1#
 	la $t1, NUM_COLLISION #Get address of collision#
 	lw $t3, ($t1) #Get value of num_collision#
-	add $t2, $t3, 1 #iterate by 1#
+	add $t2, $t3, -1 #iterate by -1#
+	beqz $t2, GAME_OVER #if the number of collisions (ship health) is 0 then go to game over
 	sw $t2, ($t1) #store value back#
 	
 	#Erase SHIP#
@@ -1437,13 +2143,66 @@ nothing_pressed:
 	
 SAFE:
 
+#Erase Health Bar#
+#Must do this before drawing both health bar and health bar background because if not then it will erase one of the two ecompletely#
+	li $a0, 8
+	jal erase_obj
+
+#Draw Health Bar Background#
+	li $a0, 7
+	jal draw_obj
+
+#Draw Health Bar#
+	li $a0, 8
+	jal draw_obj
 
 #sleep#
 	li $v0, 32
 	li $a0, 40
 	syscall
 	j game_loop
+
+GAME_OVER:
+	#Erase all the things#
+	li $a0,0
+	jal erase_obj
+	li $a0,1
+	jal erase_obj
+	li $a0,2
+	jal erase_obj
+	li $a0,8
+	jal erase_obj
+	li $a0, 5
+	jal erase_obj
+	li $a0, 9 
+	jal erase_obj
 	
+	#Draw Game Over#
+	li $a0, 9
+	jal draw_obj
+	
+RESTART_LOOP:
+	li $t9, KEYBOARD_ADDRESS
+	lw $t8, ($t9)
+	beq $t8, $zero, game_over_loop
+	
+	#Key was pressed#
+	
+	#Check for 'p' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x70, p_reset
+	
+	j RESTART_LOOP
+	
+p_reset:
+	#Reset the game#
+	li $t1, 0 #ensures that the value does not stay in $t1 when the game loop occurs again
+	j start
+	
+game_over_loop:
+
+	j RESTART_LOOP
+
 end:
 	li $v0, 10 # terminate the program
 	syscall
