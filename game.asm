@@ -35,6 +35,8 @@
 
 .data
 
+debugging:	.asciiz	"Hello I am here\n"
+
 SHIP:	.word	 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffaa00, 0xffaa00
 SHIP_HIT:	.word	0xff0000, 0xff0000, 0xff0000, 0xff0000, 0xff0000, 0xff0000
 SHIP_Y:	.word	15, 14, 16, 15, 14, 16
@@ -57,6 +59,17 @@ OB3_Y:	.space	24
 OB3_X:	.space	24
 OB3_SIZE: .word 6
 
+OB2_BIG:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
+OB2_Y_BIG:	.space	16
+OB2_X_BIG:	.space	16
+OB2_SIZE_BIG: .word 4
+
+OB3_BIG:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
+OB3_Y_BIG:	.space	20
+OB3_X_BIG:	.space	20
+OB3_SIZE_BIG: .word 5
+
+
 HIT_SCREEN_RIGHT:	.word	0
 HIT_SCREEN_UP:	.word	0
 
@@ -74,7 +87,8 @@ HEALTH_Y:	.word	29, 29, 29, 29, 29, 29, 29
 
 
 COUNTER:	.word	0
-
+LIMIT:	.word	50
+INITCOUNT:	.word	1
 
 G_COLOR:	.word	0xffffff
 G_SIZE:	.word	16
@@ -116,16 +130,6 @@ R_X:	.word	27, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30
 R_Y:	.word	17, 16, 15, 14, 13, 15, 13, 17, 16, 15, 13, 17, 15, 14, 13
 
 
-#OB4:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
-#OB4_Y:	.space	20
-#OB4_X:	.space	20
-#OB4_SIZE: .word 5
-
-#OB5:	.word	0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
-#OB5_Y:	.space	20
-#OB5_X:	.space	20
-#OB5_SIZE: .word 5
-
 
 
 .eqv BASE_ADDRESS 0x10008000
@@ -158,8 +162,14 @@ draw_obj:
 	beq $a0, $t9, DRAW_ELSE_IF_7
 	li $t9, 8
 	beq $a0, $t9, DRAW_ELSE_IF_8
+	
+	#Will only happen when counter > limit#
 	li $t9, 9
 	beq $a0, $t9, DRAW_ELSE_IF_9
+	li $t9, 10
+	beq $a0, $t9, DRAW_ELSE_IF_10
+	li $t9, 11
+	beq $a0, $t9, DRAW_ELSE_IF_11
 
 	#Draw SHIP#
 	#Only occurs when $a0 is 5#
@@ -887,6 +897,108 @@ DRAW_LOOP16:
 END_DRAW_LOOP16:
 
 	jr $ra
+
+#Draw OB4#
+DRAW_ELSE_IF_10:
+	
+	la $s1, OB2_BIG #Load OB2_BIG address into $s1#
+	
+	#Get base address of OB2_X_BIG, OB2_Y_BIG#
+	la $s2, OB2_X_BIG
+	la $s3, OB2_Y_BIG
+	
+	#Get address and value of OB2_SIZE_BIG #
+	la $t9, OB2_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP17:	
+	
+	beq $t8, $t9, END_DRAW_LOOP17
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j DRAW_LOOP17
+
+END_DRAW_LOOP17:	
+	
+	jr $ra
+
+DRAW_ELSE_IF_11:
+	
+	la $s1, OB3_BIG #Load OB3_BIG address into $s1#
+	
+	#Get base address of OB3_X_BIG, OB3_Y_BIG#
+	la $s2, OB3_X_BIG
+	la $s3, OB3_Y_BIG
+	
+	#Get address and value of OB2_SIZE_BIG #
+	la $t9, OB3_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP18:	
+	
+	beq $t8, $t9, END_DRAW_LOOP18
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j DRAW_LOOP18
+
+END_DRAW_LOOP18:	
+	
+	jr $ra
+
 	
 #__________FUNCTION__________#
 #erase_obj(int a)#
@@ -909,6 +1021,10 @@ erase_obj:
 	beq $a0, $t9, ERA_ELSE_IF_8
 	li $t9, 9
 	beq $a0, $t9, ERA_ELSE_IF_9
+	li $t9, 10
+	beq $a0, $t9, ERA_ELSE_IF_10
+	li $t9, 11
+	beq $a0, $t9, ERA_ELSE_IF_11
 	
 	#Erase SHIP#
 	#only occurs when $a0 is 5#
@@ -1214,7 +1330,108 @@ ERASE_LOOP9:
 END_ERASE_LOOP9:
 	
 	jr $ra
+
+#Erase OB4#
+ERA_ELSE_IF_10:
 	
+	la $s1, OB2_BIG
+	
+	#Get base address of OB2_X_BIG, OB2_Y_BIG#
+	la $s2, OB2_X_BIG
+	la $s3, OB2_Y_BIG
+	
+	#Get address and value of OB2_SIZE_BIG #
+	la $t9, OB2_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP10:	
+
+	beq $t8, $t9, END_ERASE_LOOP10
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP10
+
+END_ERASE_LOOP10:
+	
+	jr $ra
+
+#Erase OB5#
+ERA_ELSE_IF_11:
+	
+	la $s1, OB3_BIG
+	
+	#Get base address of OB3_X_BIG, OB3_Y_BIG#
+	la $s2, OB3_X_BIG
+	la $s3, OB3_Y_BIG
+	
+	#Get address and value of OB1_SIZE_BIG #
+	la $t9, OB3_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP11:	
+
+	beq $t8, $t9, END_ERASE_LOOP11
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1
+	
+	j ERASE_LOOP11
+
+END_ERASE_LOOP11:
+	
+	jr $ra
 	
 #__________FUNCTION__________#
 move_left:
@@ -1308,6 +1525,77 @@ MOVE_LOOP3:
 
 END_MOVE_LOOP3:
 
+
+	#Check counter
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	la $t3, LIMIT
+	lw $t4, ($t3)
+	
+	bgt $t2, $t4, move_hard_ob #checks if the counter is greater than the limit
+	
+	jr $ra
+	
+move_hard_ob:
+	
+	#OB4#
+	la $s2, OB2_X_BIG #Get base address of OB2_X_BIG#
+	
+	#Get address and value of OB2_SIZE_BIG #
+	la $t9, OB2_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_LOOP4:	
+	
+	beq $t8, $t9, END_MOVE_LOOP4
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -2 #Moves at -3 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_LOOP4
+
+END_MOVE_LOOP4:
+
+	#OB5#
+	la $s2, OB3_X_BIG #Get base address of OB2_X_BIG#
+	
+	#Get address and value of OB2_SIZE_BIG #
+	la $t9, OB3_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_LOOP5:	
+	
+	beq $t8, $t9, END_MOVE_LOOP5
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -3 #Moves at -3 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_LOOP5
+
+END_MOVE_LOOP5:
+
 	jr $ra
 	
 #__________FUNCTION__________#
@@ -1321,10 +1609,10 @@ set_coord:
 	beq $a1, $t9, SET_ELSE_IF_2
 	li $t9, 2
 	beq $a1, $t9, SET_ELSE_IF_3
-	#li $t9, 3
-	#beq $a1, $t9, SET_ELSE_IF_4
-	#li $t9, 4
-	#beq $a1, $t9, SET_ELSE_IF_5
+	li $t9, 3
+	beq $a1, $t9, SET_ELSE_IF_4
+	li $t9, 4
+	beq $a1, $t9, SET_ELSE_IF_5
 
 	
 SET_ELSE_IF_1:
@@ -1457,7 +1745,80 @@ SET_ELSE_IF_3:
 	
 	jr $ra
 
+SET_ELSE_IF_4:
+	
+	la $s2, OB2_X_BIG #Get base address of OB3_X#
+	la $s1, OB2_Y_BIG #Get base address of OB3_Y#
+	
+	#Set X#
+	li $t1, 30
+	sw $t1, ($s2)
+	li $t1, 31
+	sw $t1, 4($s2)
+	li $t1, 31
+	sw $t1, 8($s2)
+	li $t1, 32
+	sw $t1, 12($s2)
 
+	
+	
+	#Set Y#
+	add $t1, $zero, $a0
+	sw $t1, ($s1)
+	
+	li $t2, -1
+	add $t1, $a0, $t2 
+	sw $t1, 4($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 8($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 12($s1)
+	
+	
+	jr $ra
+
+SET_ELSE_IF_5:
+	
+	la $s2, OB3_X_BIG #Get base address of OB3_X_BIG#
+	la $s1, OB3_Y_BIG #Get base address of OB3_Y_BIG#
+	
+	#Set X#
+	li $t1, 30
+	sw $t1, ($s2)
+	li $t1, 31
+	sw $t1, 4($s2)
+	li $t1, 31
+	sw $t1, 8($s2)
+	li $t1, 32
+	sw $t1, 12($s2)
+	li $t1, 32
+	sw $t1, 16($s2)
+
+	
+	
+	#Set Y#
+	add $t1, $zero, $a0
+	sw $t1, ($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 4($s1)
+	
+	li $t2, 1
+	add $t1, $a0, $t2 
+	sw $t1, 8($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 12($s1)
+	
+	li $t2, -1
+	add $t1, $a0, $t2
+	sw $t1, 16($s1)
+	
+	
+	jr $ra
+	
 #__________FUNCTION__________#
 #moves ship in direction of keyboard input#
 #takes in $a0 to deterine the keypress and direction#
@@ -1841,6 +2202,125 @@ END_OF_INNER_COLLISION_LOOP3:
 	
 END_OF_COLLISION_LOOP3:	
 	
+	#Check counter
+	la $t5, COUNTER
+	lw $t6, ($t5)
+	la $t3, LIMIT
+	lw $t7, ($t3)
+	
+	bgt $t6, $t7, check_harder_ob #checks if the counter is greater than the limit
+	
+	li $v0, 0
+	jr $ra
+	
+check_harder_ob:
+	
+	#li $v0, 4
+	#la $a0, debugging
+	#syscall
+	
+	#Check collision with OB4#
+	la $t3, OB2_X_BIG
+	la $t4, OB2_Y_BIG
+	la $t9, OB2_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+COLLISION_LOOP4:
+	beq $s0, $t8, END_OF_COLLISION_LOOP4
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_COLLISION_LOOP4:
+	beq $s1, $t9, END_OF_INNER_COLLISION_LOOP4
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB3_X#
+	add $s7, $s3, $t4 #Offset for OB3_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_HIT4
+	
+	#Check ship y and ob3 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_HIT4
+	
+	li $v0, 1
+	jr $ra
+	
+NO_HIT4:
+	addi $s1, $s1, 1 
+	j INNER_COLLISION_LOOP4
+	
+
+END_OF_INNER_COLLISION_LOOP4:
+	
+	addi $s0, $s0, 1 
+	j COLLISION_LOOP4
+	
+END_OF_COLLISION_LOOP4:
+	
+	#Check collision with OB5#
+	la $t3, OB3_X_BIG
+	la $t4, OB3_Y_BIG
+	la $t9, OB3_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+COLLISION_LOOP5:
+	beq $s0, $t8, END_OF_COLLISION_LOOP5
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_COLLISION_LOOP5:
+	beq $s1, $t9, END_OF_INNER_COLLISION_LOOP5
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB3_X#
+	add $s7, $s3, $t4 #Offset for OB3_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_HIT5
+	
+	#Check ship y and ob3 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_HIT5
+	
+	li $v0, 1
+	jr $ra
+	
+NO_HIT5:
+	addi $s1, $s1, 1 
+	j INNER_COLLISION_LOOP5
+	
+
+END_OF_INNER_COLLISION_LOOP5:
+	
+	addi $s0, $s0, 1 
+	j COLLISION_LOOP5
+	
+END_OF_COLLISION_LOOP5:
+	
 	li $v0, 0
 	jr $ra
 	
@@ -1959,11 +2439,73 @@ end_clear_loop:
 	la $t8, NUM_COLLISION #get the address of NUM_COLLISION
 	li $t9, 7
 	sw $t9, 0($t8) #store the value of 7
+	
+	#--Initialize HIT_SCREEN_RIGHT--#
+	la $t8, HIT_SCREEN_RIGHT
+	sw $zero, 0($t8)
+	
+	#--Initialize HIT_SCREEN_UP--#
+	la $t8, HIT_SCREEN_UP
+	sw $zero, 0($t8)
+	
+	#--Initialize counter--#
+	la $t8, COUNTER #get the address of COUNTER
+	sw $zero, 0($t8) #store the value of 0
+	
+	#--Initialize initcount--#
+	la $t8, INITCOUNT
+	li $t7, 1
+	sw $t7, 0($t8)
 
+	
 game_loop:	
 
+	
+	#Check counter
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	la $t3, LIMIT
+	lw $t4, ($t3)
+	
+	la $t5, INITCOUNT
+	lw $t6, ($t5)
+	
+	beqz $t6, erase_obs
+	ble $t2, $t4, erase_obs #checks if the counter is greater than the limit
+	
+	#Only executes if counter > limit#
+	
+	#--Initialize and Draw OB4--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 3
+	jal set_coord 
+	#Draw OB2#
+	li $a0, 10
+	jal draw_obj
+	
+	#--Initialize and Draw OB5--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 4
+	jal set_coord
+	#Draw OB2#
+	li $a0, 11
+	jal draw_obj
+	
+	la $t5, INITCOUNT
+	sw $zero, ($t5)
+	
 #Erase Obstacle#
-
+erase_obs:
 	#Erase OB1#
 	li $a0, 0
 	jal erase_obj
@@ -1974,8 +2516,23 @@ game_loop:
 	li $a0, 2
 	jal erase_obj
 
-
+	#Check counter
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	la $t3, LIMIT
+	lw $t4, ($t3)
+	
+	ble $t2, $t4, update_obs #checks if the counter is greater than the limit
+	
+	#Erase OB4#
+	li $a0, 10
+	jal erase_obj
+	#Erase OB5#
+	li $a0, 11
+	jal erase_obj
+	
 #Update Obstacle#
+update_obs:
 	jal move_left
 
 		
@@ -2046,8 +2603,60 @@ check3_end:
 	li $a0, 2
 	jal draw_obj		
 
+	
+	#Check counter
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	la $t3, LIMIT
+	lw $t4, ($t3)
+	
+	ble $t2, $t4, er_ship #checks if the counter is greater than the limit
+	
+	#Check OB4#
+	la $t1, OB2_X_BIG
+	lw $t2, ($t1) #Get value of OB1_X[0] which is the first unit this makes it less distracting#
+	bgez $t2, check4_end #if $t2 is greater than or equal zero#
+	
+	#Reposition OB4#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 3
+	jal set_coord
+	
+check4_end: 
+
+	#Draw Obstacle#
+	li $a0, 10
+	jal draw_obj
+	
+	
+	#Check OB5#
+	la $t1, OB3_X_BIG
+	lw $t2, ($t1) #Get value of OB1_X[0] which is the first unit this makes it less distracting#
+	bgez $t2, check5_end #if $t2 is greater than or equal zero#
+	
+	#Reposition OB5#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 4
+	jal set_coord
+	
+check5_end: 
+
+	#Draw Obstacle#
+	li $a0, 11
+	jal draw_obj
 
 #Erase Ship#
+er_ship:
 	li $a0, 5
 	jal erase_obj
 
@@ -2156,6 +2765,12 @@ SAFE:
 	li $a0, 8
 	jal draw_obj
 
+#Iterate Counter by 1#
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	addi $t2, $t2, 1
+	sw $t2, ($t1)
+
 #sleep#
 	li $v0, 32
 	li $a0, 40
@@ -2175,6 +2790,10 @@ GAME_OVER:
 	li $a0, 5
 	jal erase_obj
 	li $a0, 9 
+	jal erase_obj
+	li $a0, 10
+	jal erase_obj
+	li $a0, 11
 	jal erase_obj
 	
 	#Draw Game Over#
