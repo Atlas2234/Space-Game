@@ -70,6 +70,13 @@ OB3_X_BIG:	.space	20
 OB3_SIZE_BIG: .word 5
 
 
+BULLET_COLOR:	.word	0xff2200, 0xffaa00, 0xffff00
+BULLET_X:	.space	12
+BULLET_Y:	.space	12
+BULLET_SIZE:	.word	3
+BULLET_IS_ACTIVE:	.word	0
+
+
 HIT_SCREEN_RIGHT:	.word	0
 HIT_SCREEN_UP:	.word	0
 
@@ -87,7 +94,7 @@ HEALTH_Y:	.word	29, 29, 29, 29, 29, 29, 29
 
 
 COUNTER:	.word	0
-LIMIT:	.word	50
+LIMIT:	.word	300
 INITCOUNT:	.word	1
 
 G_COLOR:	.word	0xffffff
@@ -130,8 +137,6 @@ R_X:	.word	27, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30
 R_Y:	.word	17, 16, 15, 14, 13, 15, 13, 17, 16, 15, 13, 17, 15, 14, 13
 
 
-
-
 .eqv BASE_ADDRESS 0x10008000
 .eqv KEYBOARD_ADDRESS 0xffff0000
 .eqv WIDTH 32
@@ -170,6 +175,10 @@ draw_obj:
 	beq $a0, $t9, DRAW_ELSE_IF_10
 	li $t9, 11
 	beq $a0, $t9, DRAW_ELSE_IF_11
+	
+	#Will only happen when BULLET_IS_ACTIVE is 0#
+	li $t9, 12
+	beq $a0, $t9, DRAW_ELSE_IF_12
 
 	#Draw SHIP#
 	#Only occurs when $a0 is 5#
@@ -949,6 +958,7 @@ END_DRAW_LOOP17:
 	
 	jr $ra
 
+#Draw OB5#
 DRAW_ELSE_IF_11:
 	
 	la $s1, OB3_BIG #Load OB3_BIG address into $s1#
@@ -999,6 +1009,56 @@ END_DRAW_LOOP18:
 	
 	jr $ra
 
+#Draw Bullet#
+DRAW_ELSE_IF_12:
+	
+	la $s1, BULLET_COLOR #Load BULLET_COLOR address into $s1#
+	
+	#Get base address of BULLET_X, BULLET_Y#
+	la $s2, BULLET_X
+	la $s3, BULLET_Y
+	
+	#Get address and value of BULLET_SIZE#
+	la $t9, BULLET_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP19:
+	
+	beq $t8, $t9, END_DRAW_LOOP19
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for BULLET_X#
+	add $s6, $s3, $t1 #Offset for BULLET_Y#
+	add $s7, $s1, $t1 #Offset for BULLET_COLOR#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of BULLET_COLOR into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7)
+	
+	addi $t8, $t8, 1
+	
+	j DRAW_LOOP19
+	
+END_DRAW_LOOP19:
+	
+	jr $ra
 	
 #__________FUNCTION__________#
 #erase_obj(int a)#
@@ -1025,6 +1085,8 @@ erase_obj:
 	beq $a0, $t9, ERA_ELSE_IF_10
 	li $t9, 11
 	beq $a0, $t9, ERA_ELSE_IF_11
+	li $t9, 12
+	beq $a0, $t9, ERA_ELSE_IF_12
 	
 	#Erase SHIP#
 	#only occurs when $a0 is 5#
@@ -1433,6 +1495,58 @@ END_ERASE_LOOP11:
 	
 	jr $ra
 	
+#Erase the bullet#
+
+ERA_ELSE_IF_12:
+	
+	la $s1, BULLET_COLOR #Load BULLET_COLOR address into $s1#
+	
+	#Get base address of BULLET_X, BULLET_Y#
+	la $s2, BULLET_X
+	la $s3, BULLET_Y
+	
+	#Get address and value of BULLET_SIZE #
+	la $t9, BULLET_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP12:	
+
+	beq $t8, $t9, END_ERASE_LOOP12
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for SHIP_X#
+	add $s6, $s3, $t1 #Offset for SHIP_Y#
+	add $s7, $s1, $t1 #Offset for SHIP#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of SHIP into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of BULLET[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP12
+
+END_ERASE_LOOP12:
+	jr $ra	
+	
+
 #__________FUNCTION__________#
 move_left:
 #Shifts obstacles to the left one unit#
@@ -1613,6 +1727,8 @@ set_coord:
 	beq $a1, $t9, SET_ELSE_IF_4
 	li $t9, 4
 	beq $a1, $t9, SET_ELSE_IF_5
+	li $t9, 5
+	beq $a1, $t9, SET_ELSE_IF_6
 
 	
 SET_ELSE_IF_1:
@@ -1818,7 +1934,36 @@ SET_ELSE_IF_5:
 	
 	
 	jr $ra
+
+#Set coordinates of bullet#
+SET_ELSE_IF_6:
 	
+	la $s3, SHIP_X #Get base address of SHIP_X#
+	la $s4, SHIP_Y #Get base address of SHIP_Y#
+	lw $t1, 12($s3) #Get X of the head of the ship#
+	lw $t2, 12($s4) #Get Y of the head of the ship#
+	
+	la $s2, BULLET_X #Get base address of OB3_X_BIG#
+	la $s1, BULLET_Y #Get base address of OB3_Y_BIG#
+	
+	#Set X#
+	addi, $t1, $t1, 1 #Makes it so the bullet appears 1 unit right in front of the ship#
+	sw $t1, 0($s2)
+	#Keep adding by one to make it 3 units along the x axis
+	addi, $t1, $t1, 1
+	sw $t1, 4($s2)
+	addi, $t1, $t1, 1
+	sw $t1,8($s2)
+	
+	#Set Y#
+	sw $t2, 0($s1) #Makes Y of bullet same as the ship head#
+	sw $t2, 4($s1) #Makes Y of bullet same as the ship head#
+	sw $t2, 8($s1) #Makes Y of bullet same as the ship head#
+	
+	jr $ra
+	
+		
+
 #__________FUNCTION__________#
 #moves ship in direction of keyboard input#
 #takes in $a0 to deterine the keypress and direction#
@@ -2324,7 +2469,327 @@ END_OF_COLLISION_LOOP5:
 	li $v0, 0
 	jr $ra
 	
+
+#__________FUNCTION__________#
+#Moves the bullet to the right#
+move_bullet_right:
+
+	la $s2, BULLET_X #Get base address of BULLET_X#
 	
+	#Get address and value of BULLET_SIZE #
+	la $t9, BULLET_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_RIGHT1:	
+	
+	beq $t8, $t9, END_MOVE_RIGHT1
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for BULLET_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, 2 #Moves at +2 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_RIGHT1
+
+END_MOVE_RIGHT1:
+	
+	jr $ra	
+
+#__________FUNCTION__________#
+#checks for collision between bullet and obstacles#
+#returns # of ob for $v0 if there is a collision with that object#
+#returns 0 for $v0 if there is not a collision#
+check_bullet_col:
+	#Load base address of SHIP_X and SHIP_Y#
+	la $t1, BULLET_X
+	la $t2, BULLET_Y
+	la $t8, BULLET_SIZE
+	lw $t8, ($t8)
+	
+	#Check collision with OB1#
+	la $t3, OB1_X
+	la $t4, OB1_Y
+	la $t9, OB1_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+BULLET_COLLISION_LOOP1:
+	beq $s0, $t8, END_OF_BULLET_COLLISION_LOOP1
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_BULLET_COLLISION_LOOP1:
+	beq $s1, $t9, END_OF_INNER_BULLET_COLLISION_LOOP1
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, MISS
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, MISS
+	
+	li $v0, 1
+	
+	jr $ra
+	
+MISS:
+	addi $s1, $s1, 1 
+	j INNER_BULLET_COLLISION_LOOP1
+	
+
+END_OF_INNER_BULLET_COLLISION_LOOP1:
+	
+	addi $s0, $s0, 1 
+	j BULLET_COLLISION_LOOP1
+	
+END_OF_BULLET_COLLISION_LOOP1:
+	
+	#Check collision with OB2#
+	la $t3, OB2_X
+	la $t4, OB2_Y
+	la $t9, OB2_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+BULLET_COLLISION_LOOP2:
+	beq $s0, $t8, END_OF_BULLET_COLLISION_LOOP2
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_BULLET_COLLISION_LOOP2:
+	beq $s1, $t9, END_OF_INNER_BULLET_COLLISION_LOOP2
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, MISS2
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, MISS2
+	
+	li $v0, 2
+	
+	jr $ra
+	
+MISS2:
+	addi $s1, $s1, 1 
+	j INNER_BULLET_COLLISION_LOOP2
+	
+
+END_OF_INNER_BULLET_COLLISION_LOOP2:
+	
+	addi $s0, $s0, 1 
+	j BULLET_COLLISION_LOOP2
+	
+END_OF_BULLET_COLLISION_LOOP2:
+	
+	#Check collision with OB3#
+	la $t3, OB3_X
+	la $t4, OB3_Y
+	la $t9, OB3_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+BULLET_COLLISION_LOOP3:
+	beq $s0, $t8, END_OF_BULLET_COLLISION_LOOP3
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_BULLET_COLLISION_LOOP3:
+	beq $s1, $t9, END_OF_INNER_BULLET_COLLISION_LOOP3
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, MISS3
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, MISS3
+	
+	li $v0, 3
+	
+	jr $ra
+	
+MISS3:
+	addi $s1, $s1, 1 
+	j INNER_BULLET_COLLISION_LOOP3
+	
+
+END_OF_INNER_BULLET_COLLISION_LOOP3:
+	
+	addi $s0, $s0, 1 
+	j BULLET_COLLISION_LOOP3
+	
+END_OF_BULLET_COLLISION_LOOP3:
+	
+	#Check counter
+	la $t5, COUNTER
+	lw $t6, ($t5)
+	la $t3, LIMIT
+	lw $t7, ($t3)
+	
+	bgt $t6, $t7, check_harder #checks if the counter is greater than the limit
+	
+	li $v0, 0
+	jr $ra
+
+check_harder:	
+	
+	#Check collision with OB4#
+	la $t3, OB2_X_BIG
+	la $t4, OB2_Y_BIG
+	la $t9, OB2_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+BULLET_COLLISION_LOOP4:
+	beq $s0, $t8, END_OF_BULLET_COLLISION_LOOP4
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_BULLET_COLLISION_LOOP4:
+	beq $s1, $t9, END_OF_INNER_BULLET_COLLISION_LOOP4
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, MISS4
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, MISS4
+	
+	li $v0, 4
+	
+	jr $ra
+	
+MISS4:
+	addi $s1, $s1, 1 
+	j INNER_BULLET_COLLISION_LOOP4
+	
+
+END_OF_INNER_BULLET_COLLISION_LOOP4:
+	
+	addi $s0, $s0, 1 
+	j BULLET_COLLISION_LOOP4
+	
+END_OF_BULLET_COLLISION_LOOP4:
+	
+	#Check collision with OB5#
+	la $t3, OB3_X_BIG
+	la $t4, OB3_Y_BIG
+	la $t9, OB3_SIZE_BIG
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+BULLET_COLLISION_LOOP5:
+	beq $s0, $t8, END_OF_BULLET_COLLISION_LOOP5
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_BULLET_COLLISION_LOOP5:
+	beq $s1, $t9, END_OF_INNER_BULLET_COLLISION_LOOP5
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, MISS5
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, MISS5
+	
+	li $v0, 5
+	
+	jr $ra
+	
+MISS5:
+	addi $s1, $s1, 1 
+	j INNER_BULLET_COLLISION_LOOP5
+	
+
+END_OF_INNER_BULLET_COLLISION_LOOP5:
+	
+	addi $s0, $s0, 1 
+	j BULLET_COLLISION_LOOP5
+	
+END_OF_BULLET_COLLISION_LOOP5:
+	
+	li $v0, 0
+	jr $ra
 
 #__________FUNCTION__________#
 main:
@@ -2456,6 +2921,10 @@ end_clear_loop:
 	la $t8, INITCOUNT
 	li $t7, 1
 	sw $t7, 0($t8)
+	
+	#--Initialize BULLET_IS_ACTIVE#
+	la $t8, BULLET_IS_ACTIVE
+	sw $zero, 0($t8)
 
 	
 game_loop:	
@@ -2484,7 +2953,7 @@ game_loop:
 	#Set rest of coordinates from random Y#
 	li $a1, 3
 	jal set_coord 
-	#Draw OB2#
+	#Draw OB4#
 	li $a0, 10
 	jal draw_obj
 	
@@ -2497,7 +2966,7 @@ game_loop:
 	#Set rest of coordinates from random Y#
 	li $a1, 4
 	jal set_coord
-	#Draw OB2#
+	#Draw OB5#
 	li $a0, 11
 	jal draw_obj
 	
@@ -2687,6 +3156,10 @@ er_ship:
 	lw $t1, 4($t9)
 	beq $t1, 0x70, respond_to_p
 	
+	#Check for 'k' press#
+	lw $t1, 4($t9)
+	beq $t1, 0x6B, respond_to_k
+	
 	#No mapped keys were pressed#
 	j nothing_pressed
 
@@ -2722,13 +3195,229 @@ respond_to_p:
 	#Restart game#
 	j start
 
+respond_to_k:
+	#Check if a bullet is on the screen#
+	la $t1, BULLET_IS_ACTIVE
+	lw $t2, 0($t1)
+	
+	bgt $t2, $zero, bullet_exists 
+	#Only executes if there is no bullet on screen
+	#li $v0, 4
+	#la $a0, debugging
+	#syscall
+	
+	li $a0, 5
+	li $a1, 5
+	jal set_coord
+	
+	li $a0, 12
+	jal draw_obj
+	
+	la $t1, BULLET_IS_ACTIVE
+	#Set bullet to active#
+	li $t2, 1
+	sw $t2, 0($t1)
+	
+bullet_exists:
+	
+
 nothing_pressed:
 
 	#Draw Ship#
 	li $a0, 5
 	jal draw_obj
 
-#Check for collisions#
+
+#Check if there is a bullet#
+	la $t1, BULLET_IS_ACTIVE
+	lw $t2, 0($t1)
+	beqz $t2,  no_bullet
+	
+	#Executes only if there is a bullet on screen#
+	
+#Delete Bullet#
+
+	li $a0, 12
+	jal erase_obj
+	
+#Update Bullet#
+	
+	jal move_bullet_right
+
+#Check Bullet#
+	
+	la $t1, BULLET_X
+	lw $t2, 8($t1) #Get value of BULLET_X frathest to the right#
+	li $t3, 32
+	blt $t2, $t3, bullet_in_res #if $t2 is equal to zero then BULLET_X is on a multiple of 32 which is the edge of the screen#
+	
+	#Only executes when bullet is off screen
+
+bullet_not_in_res:	
+	#Sets the bullet to not active#
+	la $t1, BULLET_IS_ACTIVE
+	sw $zero, ($t1)
+	
+	j no_bullet
+	
+bullet_in_res:
+#Draw Bullet#
+	li $a0, 12
+	jal draw_obj
+
+#Check for collisions with bullet#
+	
+	jal check_bullet_col
+	
+	#If function returns non zero then bullet did not miss#
+	li $t1, 1
+	beq $v0, $t1, obj1_hit
+	li $t1, 2
+	beq $v0, $t1, obj2_hit
+	li $t1, 3
+	beq $v0, $t1, obj3_hit
+	li $t1, 4
+	beq $v0, $t1, obj4_hit
+	li $t1, 5
+	beq $v0, $t1, obj5_hit
+	
+	#Happens when nothing is hit
+	j no_bullet
+
+obj1_hit:
+	
+	#Erase Bullet#
+	li $a0, 12
+	jal erase_obj
+	
+	#Erase OB1#
+	li $a0, 0
+	jal erase_obj
+	
+	#Reposition OB1#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 0
+	jal set_coord
+	
+	#Draw Obstacle#
+	li $a0, 0
+	jal draw_obj
+	
+	j bullet_not_in_res
+		
+obj2_hit:
+	
+	#Erase Bullet#
+	li $a0, 12
+	jal erase_obj
+	
+	#Erase OB2#
+	li $a0, 1
+	jal erase_obj
+	
+	#Reposition OB2#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 1
+	jal set_coord
+	
+	#Draw Obstacle#
+	li $a0, 1
+	jal draw_obj
+	
+	j bullet_not_in_res
+
+obj3_hit:
+	
+	#Erase Bullet#
+	li $a0, 12
+	jal erase_obj
+	
+	#Erase OB3#
+	li $a0, 2
+	jal erase_obj
+	
+	#Reposition OB3#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 2
+	jal set_coord
+	
+	#Draw Obstacle#
+	li $a0, 2
+	jal draw_obj
+	
+	j bullet_not_in_res
+
+obj4_hit:
+	
+	#Erase Bullet#
+	li $a0, 12
+	jal erase_obj
+	
+	#Erase OB4#
+	li $a0, 10
+	jal erase_obj
+	
+	#Reposition OB4#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 3
+	jal set_coord
+	
+	#Draw Obstacle#
+	li $a0, 10
+	jal draw_obj
+	
+	j bullet_not_in_res
+
+obj5_hit:
+	
+	#Erase Bullet#
+	li $a0, 12
+	jal erase_obj
+	
+	#Erase OB1#
+	li $a0, 11
+	jal erase_obj
+	
+	#Reposition OB1#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 4
+	jal set_coord
+	
+	#Draw Obstacle#
+	li $a0, 11
+	jal draw_obj
+	
+	j bullet_not_in_res
+			
+no_bullet:
+
+
+#Check for collisions on ship#
 	
 	jal check_collision
 	
@@ -2794,6 +3483,8 @@ GAME_OVER:
 	li $a0, 10
 	jal erase_obj
 	li $a0, 11
+	jal erase_obj
+	li $a0, 12
 	jal erase_obj
 	
 	#Draw Game Over#
