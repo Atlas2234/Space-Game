@@ -95,6 +95,7 @@ HEALTH_Y:	.word	29, 29, 29, 29, 29, 29, 29
 
 COUNTER:	.word	0
 LIMIT:	.word	300
+LIMIT2:	.word	500
 INITCOUNT:	.word	1
 
 G_COLOR:	.word	0xffffff
@@ -136,7 +137,22 @@ R_SIZE:	.word 15
 R_X:	.word	27, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30
 R_Y:	.word	17, 16, 15, 14, 13, 15, 13, 17, 16, 15, 13, 17, 15, 14, 13
 
+PICK_UP_1:	.word	0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00
+PICK_UP_1_X:	.space	16
+PICK_UP_1_Y:	.space	16
+PICK_UP_1_SIZE:	.word	4
 
+PICKONE_IS_ACTIVE:	.word	0
+
+PICK_UP_2:	.word	0xffcc00, 0xffcc00, 0xffcc00, 0xffcc00
+PICK_UP_2_X:	.space	16
+PICK_UP_2_Y:	.space	16
+PICK_UP_2_SIZE:	.word	4
+PICK_UP_2_START:	.word	0
+PICK_UP_2_LIMIT:	.word	70
+
+PICKTWO_IS_ACTIVE:	.word	0
+SLOW_TIME:	.word	0
 .eqv BASE_ADDRESS 0x10008000
 .eqv KEYBOARD_ADDRESS 0xffff0000
 .eqv WIDTH 32
@@ -179,7 +195,15 @@ draw_obj:
 	#Will only happen when BULLET_IS_ACTIVE is 0#
 	li $t9, 12
 	beq $a0, $t9, DRAW_ELSE_IF_12
-
+	
+	#Only for pickups
+	li $t9, 13
+	beq $a0, $t9, DRAW_ELSE_IF_13
+	
+	li $t9, 14
+	beq $a0, $t9, DRAW_ELSE_IF_14
+	
+	
 	#Draw SHIP#
 	#Only occurs when $a0 is 5#
 	
@@ -1059,6 +1083,109 @@ DRAW_LOOP19:
 END_DRAW_LOOP19:
 	
 	jr $ra
+
+#Draw the first pick up#
+DRAW_ELSE_IF_13:
+	
+	la $s1, PICK_UP_1 #Load PICK_UP_1 address into $s1#
+	
+	#Get base address of PICK_UP_1_X, PICK_UP_1_Y#
+	la $s2, PICK_UP_1_X
+	la $s3, PICK_UP_1_Y
+	
+	#Get address and value of PICK_UP_1_SIZE #
+	la $t9, PICK_UP_1_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP20:	
+	
+	beq $t8, $t9, END_DRAW_LOOP20
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j DRAW_LOOP20
+
+END_DRAW_LOOP20:	
+	
+	jr $ra
+
+
+#Draw Pickup Two#
+DRAW_ELSE_IF_14:
+	la $s1, PICK_UP_2 #Load PICK_UP_2 address into $s1#
+	
+	#Get base address of PICK_UP_2_X, PICK_UP_2_Y#
+	la $s2, PICK_UP_2_X
+	la $s3, PICK_UP_2_Y
+	
+	#Get address and value of PICK_UP_2_SIZE #
+	la $t9, PICK_UP_2_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+DRAW_LOOP21:	
+	
+	beq $t8, $t9, END_DRAW_LOOP21
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations for offset of framebuffer#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j DRAW_LOOP21
+
+END_DRAW_LOOP21:	
+	
+	jr $ra
+	
 	
 #__________FUNCTION__________#
 #erase_obj(int a)#
@@ -1087,6 +1214,10 @@ erase_obj:
 	beq $a0, $t9, ERA_ELSE_IF_11
 	li $t9, 12
 	beq $a0, $t9, ERA_ELSE_IF_12
+	li $t9, 13
+	beq $a0, $t9, ERA_ELSE_IF_13
+	li $t9, 14
+	beq $a0, $t9, ERA_ELSE_IF_14
 	
 	#Erase SHIP#
 	#only occurs when $a0 is 5#
@@ -1545,7 +1676,106 @@ ERASE_LOOP12:
 
 END_ERASE_LOOP12:
 	jr $ra	
+
+#Erase Pickup One#
+ERA_ELSE_IF_13:
 	
+	la $s1, PICK_UP_1
+	
+	#Get base address of PICK_UP_1_X, PICK_UP_1_Y#
+	la $s2, PICK_UP_1_X
+	la $s3, PICK_UP_1_Y
+	
+	#Get address and value of OB1_SIZE #
+	la $t9, PICK_UP_1_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP13:	
+
+	beq $t8, $t9, END_ERASE_LOOP13
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP13
+
+END_ERASE_LOOP13:
+	
+	jr $ra
+
+ERA_ELSE_IF_14:
+	
+	la $s1, PICK_UP_2
+	
+	#Get base address of PICK_UP_2_X, PICK_UP_2_Y#
+	la $s2, PICK_UP_2_X
+	la $s3, PICK_UP_2_Y
+	
+	#Get address and value of PICK_UP_2_SIZE #
+	la $t9, PICK_UP_2_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+ERASE_LOOP14:	
+
+	beq $t8, $t9, END_ERASE_LOOP14
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	add $s6, $s3, $t1 #Offset for OB1_Y#
+	add $s7, $s1, $t1 #Offset for OB1#
+	
+	lw $t2, ($s5) #puts X value into $t2#
+	lw $t3, ($s6) #puts Y value into $t3#
+	lw $s0, ($s7) #load colour value of OB1 into $s0#
+	#Set Constant#
+	li $t4, WIDTH
+	li $t5, 4
+	
+	#Calculations#
+	mult $t3, $t4
+	mflo $t6
+	add $t6, $t6, $t2
+	mult $t6, $t5
+	mflo $t6
+	
+	add $t7, $t6, $t0 #Add offset address calculated#
+	
+	li $s0, BLACK
+	sw $s0, ($t7) #write colour value of OB1[0] into ($t0 + 0)#
+	
+	addi $t8, $t8, 1 
+	
+	j ERASE_LOOP14
+
+END_ERASE_LOOP14:
+	jr $ra
 
 #__________FUNCTION__________#
 move_left:
@@ -1639,7 +1869,77 @@ MOVE_LOOP3:
 
 END_MOVE_LOOP3:
 
+	#Check PickUp One#
+	la $t1, PICKONE_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, check_move_two
+	
+	#Pick Up 1#
+	la $s2, PICK_UP_1_X #Get base address of PICK_UP_1_X#
+	
+	#Get address and value of PICK_UP_1_SIZE#
+	la $t9, PICK_UP_1_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_LOOP4:	
+	
+	beq $t8, $t9, END_MOVE_LOOP4
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -2 #Moves at -2 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_LOOP4
 
+END_MOVE_LOOP4:
+
+check_move_two:
+	#Check PickUp Two#
+	la $t1, PICKTWO_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, checking_counter
+	
+	#Pick Up 2#
+	la $s2, PICK_UP_2_X #Get base address of PICK_UP_1_X#
+	
+	#Get address and value of PICK_UP_1_SIZE#
+	la $t9, PICK_UP_2_SIZE
+	lw $t9, ($t9)
+	
+	li $t8, 0 #$t8 is i#
+	
+MOVE_LOOP5:	
+	
+	beq $t8, $t9, END_MOVE_LOOP5
+	
+	sll $t1, $t8, 2 #$t1 has the offset#
+	add $s5, $s2, $t1 #Offset for OB1_X#
+	
+	#Calculation to shift unity left by 1#
+	li $t2, -2 #Moves at -2 units fast#
+	lw $t3, ($s5)
+	add $t3, $t3, $t2
+	
+	sw $t3, ($s5)
+	
+	addi $t8, $t8, 1 
+	
+	j MOVE_LOOP5
+
+END_MOVE_LOOP5:  
+
+checking_counter:
+	
 	#Check counter
 	la $t1, COUNTER
 	lw $t2, ($t1)
@@ -1661,9 +1961,9 @@ move_hard_ob:
 	
 	li $t8, 0 #$t8 is i#
 	
-MOVE_LOOP4:	
+MOVE_LOOP6:	
 	
-	beq $t8, $t9, END_MOVE_LOOP4
+	beq $t8, $t9, END_MOVE_LOOP6
 	
 	sll $t1, $t8, 2 #$t1 has the offset#
 	add $s5, $s2, $t1 #Offset for OB1_X#
@@ -1677,9 +1977,9 @@ MOVE_LOOP4:
 	
 	addi $t8, $t8, 1 
 	
-	j MOVE_LOOP4
+	j MOVE_LOOP6
 
-END_MOVE_LOOP4:
+END_MOVE_LOOP6:
 
 	#OB5#
 	la $s2, OB3_X_BIG #Get base address of OB2_X_BIG#
@@ -1690,9 +1990,9 @@ END_MOVE_LOOP4:
 	
 	li $t8, 0 #$t8 is i#
 	
-MOVE_LOOP5:	
+MOVE_LOOP7:	
 	
-	beq $t8, $t9, END_MOVE_LOOP5
+	beq $t8, $t9, END_MOVE_LOOP7
 	
 	sll $t1, $t8, 2 #$t1 has the offset#
 	add $s5, $s2, $t1 #Offset for OB1_X#
@@ -1706,9 +2006,9 @@ MOVE_LOOP5:
 	
 	addi $t8, $t8, 1 
 	
-	j MOVE_LOOP5
+	j MOVE_LOOP7
 
-END_MOVE_LOOP5:
+END_MOVE_LOOP7:
 
 	jr $ra
 	
@@ -1729,7 +2029,10 @@ set_coord:
 	beq $a1, $t9, SET_ELSE_IF_5
 	li $t9, 5
 	beq $a1, $t9, SET_ELSE_IF_6
-
+	li $t9, 6
+	beq $a1, $t9, SET_ELSE_IF_7
+	li $t9, 7
+	beq $a1, $t9, SET_ELSE_IF_8
 	
 SET_ELSE_IF_1:
 #Set coordinates for OB1#
@@ -1962,7 +2265,72 @@ SET_ELSE_IF_6:
 	
 	jr $ra
 	
-		
+#Set the coordinates of the first pick up#
+SET_ELSE_IF_7:
+	
+	la $s2, PICK_UP_1_X #Get base address of PICK_UP_1_X#
+	la $s1, PICK_UP_1_Y #Get base address of PICK_UP_1_Y#		
+	
+	#Set X#
+	li $t1, 30
+	sw $t1, ($s2)
+	li $t1, 30
+	sw $t1, 4($s2)
+	li $t1, 31
+	sw $t1, 8($s2)
+	li $t1, 31
+	sw $t1, 12($s2)
+
+	
+	#Set Y#
+	add $t1, $zero, $a0
+	sw $t1, ($s1)
+	
+	li $t2, 1
+	add $t1, $a0, $t2 
+	sw $t1, 4($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 8($s1)
+	
+	li $t2, 1
+	add $t1, $a0, $t2 
+	sw $t1, 12($s1)
+	
+	jr $ra
+	
+SET_ELSE_IF_8:
+	
+	la $s2, PICK_UP_2_X #Get base address of PICK_UP_2_X#
+	la $s1, PICK_UP_2_Y #Get base address of PICK_UP_2_Y#		
+	
+	#Set X#
+	li $t1, 30
+	sw $t1, ($s2)
+	li $t1, 30
+	sw $t1, 4($s2)
+	li $t1, 31
+	sw $t1, 8($s2)
+	li $t1, 31
+	sw $t1, 12($s2)
+	
+	#Set Y#
+	add $t1, $zero, $a0
+	sw $t1, ($s1)
+	
+	li $t2, 1
+	add $t1, $a0, $t2 
+	sw $t1, 4($s1)
+	
+	add $t1, $zero, $a0
+	sw $t1, 8($s1)
+	
+	li $t2, 1
+	add $t1, $a0, $t2 
+	sw $t1, 12($s1)
+
+	
+	jr $ra
 
 #__________FUNCTION__________#
 #moves ship in direction of keyboard input#
@@ -2792,6 +3160,136 @@ END_OF_BULLET_COLLISION_LOOP5:
 	jr $ra
 
 #__________FUNCTION__________#
+#check_pickup_collision takes in an argument for which pikcup to check#
+#returns 0 if there is no collision and 1 if there is a collision#
+check_pickup_collision:
+	
+	#Load base address of SHIP_X and SHIP_Y#
+	la $t1, SHIP_X
+	la $t2, SHIP_Y
+	la $t8, SHIP_SIZE
+	lw $t8, ($t8)
+	
+	li $t9, 0
+	beq $a0, $t9, check_pickup_one_collision 
+	li $t9, 1
+	beq $a0, $t9, check_pickup_two_collision
+	
+
+check_pickup_one_collision:
+					
+	#Check collision with pickup 1#
+	la $t3, PICK_UP_1_X
+	la $t4, PICK_UP_1_Y
+	la $t9, PICK_UP_1_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+PICKUP_COLLISION_LOOP1:
+	beq $s0, $t8, END_OF_PICKUP_COLLISION_LOOP1
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_PICKUP_COLLISION_LOOP1:
+	beq $s1, $t9, END_OF_INNER_PICKUP_COLLISION_LOOP1
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_BONUS 
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_BONUS
+	
+	li $v0, 1
+	jr $ra
+	
+NO_BONUS:
+	addi $s1, $s1, 1 
+	j INNER_PICKUP_COLLISION_LOOP1
+	
+
+END_OF_INNER_PICKUP_COLLISION_LOOP1:
+	
+	addi $s0, $s0, 1 
+	j PICKUP_COLLISION_LOOP1
+	
+END_OF_PICKUP_COLLISION_LOOP1:
+	
+	li $v0, 0
+	jr $ra
+
+
+check_pickup_two_collision:					
+	
+	#Check collision with pickup 2#
+	la $t3, PICK_UP_2_X
+	la $t4, PICK_UP_2_Y
+	la $t9, PICK_UP_2_SIZE
+	lw $t9, ($t9)
+	
+	li $s0, 0 #$s0 is i#
+	
+PICKUP_COLLISION_LOOP2:
+	beq $s0, $t8, END_OF_PICKUP_COLLISION_LOOP2
+	
+	sll $s2, $s0, 2 #$s2 has the offset#
+	add $s4, $s2, $t1 #Offset for SHIP_X#
+	add $s5, $s2, $t2 #Offset for SHIP_Y#
+	
+	li $s1, 0 #$s1 is j#
+
+INNER_PICKUP_COLLISION_LOOP2:
+	beq $s1, $t9, END_OF_INNER_PICKUP_COLLISION_LOOP2
+	
+	sll $s3, $s1, 2 #$s3 has the offset#
+	add $s6, $s3, $t3 #Offset for OB1_X#
+	add $s7, $s3, $t4 #Offset for OB1_Y#
+	
+	#Check ship x and ob1 x#
+	lw $t5, ($s4)
+	lw $t6, ($s6)
+	
+	bne $t5, $t6, NO_BONUS2 
+	
+	#Check ship y and ob1 y#
+	lw $t5, ($s5)
+	lw $t6, ($s7)
+	
+	bne $t5, $t6, NO_BONUS2
+	
+	li $v0, 1
+	jr $ra
+	
+NO_BONUS2:
+	addi $s1, $s1, 1 
+	j INNER_PICKUP_COLLISION_LOOP2
+	
+
+END_OF_INNER_PICKUP_COLLISION_LOOP2:
+	
+	addi $s0, $s0, 1 
+	j PICKUP_COLLISION_LOOP2
+	
+END_OF_PICKUP_COLLISION_LOOP2:
+	
+	li $v0, 0
+	jr $ra
+
+#__________FUNCTION__________#
 main:
 	
 start:	
@@ -2922,14 +3420,54 @@ end_clear_loop:
 	li $t7, 1
 	sw $t7, 0($t8)
 	
-	#--Initialize BULLET_IS_ACTIVE#
+	#--Initialize BULLET_IS_ACTIVE--#
 	la $t8, BULLET_IS_ACTIVE
 	sw $zero, 0($t8)
-
+	
+	#--Initialize PICKTWO_IS_ACTIVE--#
+	la $t8, PICKTWO_IS_ACTIVE
+	sw $zero, 0($t8)
+	
+	#--Initialize PICKONE_IS_ACTIVE--#
+	la $t8, PICKONE_IS_ACTIVE
+	sw $zero, 0($t8)
+	
+	#--Initliaze SLOW_TIME--#
+	la $t8, SLOW_TIME
+	sw $zero, 0($t8)
 	
 game_loop:	
-
 	
+	#Check SLOW_TIME#
+	la $t1, SLOW_TIME
+	lw $t2, ($t1)
+	beqz $t2 skip_check_slow_time
+	
+	#Only executes if slow_time is active#
+	
+	#Get address of slow_time_limit#
+	la $t1, PICK_UP_2_LIMIT
+	#Get address of COunter#
+	la $t2, COUNTER
+	
+	#Load slow_time_limit value into $t3#
+	lw $t3, ($t1)
+	#Load counter value into $t2#
+	lw $t4, ($t2)
+	
+	#Get and store slow_time_start into $t6#
+	la $t5, PICK_UP_2_START
+	lw $t6, ($t5)
+	
+	add $t5, $t6, $t3
+	
+	blt $t4, $t5, skip_check_slow_time
+	
+	#Only Executes if current count is greater than start time of slow time plus time limit#    
+	la $t1, SLOW_TIME #Deactivates slow_time#
+	sw $zero, ($t1) 
+	
+skip_check_slow_time:	
 	#Check counter
 	la $t1, COUNTER
 	lw $t2, ($t1)
@@ -2939,8 +3477,8 @@ game_loop:
 	la $t5, INITCOUNT
 	lw $t6, ($t5)
 	
-	beqz $t6, erase_obs
-	ble $t2, $t4, erase_obs #checks if the counter is greater than the limit
+	beqz $t6, init_pickup
+	ble $t2, $t4, init_pickup #checks if the counter is greater than the limit
 	
 	#Only executes if counter > limit#
 	
@@ -2970,11 +3508,137 @@ game_loop:
 	li $a0, 11
 	jal draw_obj
 	
+	#Adds one to INITCOUNT to signal that the objects have been initialized and they do not need to be reinitalized#
 	la $t5, INITCOUNT
 	sw $zero, ($t5)
+
+#Initialize Pick-Ups#
+init_pickup:
 	
+	la $t1, PICKONE_IS_ACTIVE
+	lw $t2, ($t1)
+	bgtz $t2, no_pickup_one #If pickup one is active then jump
+	
+	#Check counter
+	la $t5, COUNTER
+	lw $t6, ($t5)
+	la $t3, LIMIT2
+	lw $t7, ($t3)
+	
+	ble $t6, $t7, easier_1pickup #checks if the counter is greater than the limit
+
+	#--Determine when to spawn pick up--#
+	#This random generator gives it a harder chance for the pickup to occur#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number to determine when to spawn pcikup one
+	li $a0, 0
+	li $a1, 100
+	syscall
+	
+	j determine_possible_pickup1
+	
+easier_1pickup:	
+
+	#--Determine when to spawn pick up--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number to determine when to spawn pcikup one
+	li $a0, 0
+	li $a1, 20
+	syscall
+
+determine_possible_pickup1:
+	li $t1, 2
+	bne $a0, $t1, no_pickup_one
+	
+	#Only executes when the random number is a 2#
+	
+	#--Initialize and Draw Pickup One--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 6
+	jal set_coord
+	#Draw pickup one#
+	li $a0, 13
+	jal draw_obj
+	
+	#Make the pickup one active check to 1#
+	la $t1, PICKONE_IS_ACTIVE
+	li $t2, 1
+	sw $t2, ($t1)
+	
+	
+no_pickup_one:
+	
+	la $t1, PICKTWO_IS_ACTIVE
+	lw $t2, ($t1)
+	bgtz $t2, no_pickup_2 #If pickup two is active then jump
+	
+	#Check if time is slowed#
+	la $t1, SLOW_TIME
+	lw $t2, ($t1)
+	bnez $t2, no_pickup_2 #If time is slowed do not spawn a new pickup 2#
+	
+	
+	#Check counter
+	la $t5, COUNTER
+	lw $t6, ($t5)
+	la $t3, LIMIT2
+	lw $t7, ($t3)
+	
+	ble $t6, $t7, easier_2pickup #checks if the counter is greater than the limit
+
+	#--Determine when to spawn pick up--#
+	#This random generator gives it a harder chance for the pickup to occur#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number to determine when to spawn pcikup one
+	li $a0, 0
+	li $a1, 100
+	syscall
+	
+	j determine_possible_pickup2
+	
+easier_2pickup:	
+
+	#--Determine when to spawn pick up--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number to determine when to spawn pcikup one
+	li $a0, 0
+	li $a1, 20
+	syscall
+
+determine_possible_pickup2:
+	li $t1, 15
+	bne $a0, $t1, no_pickup_2
+	
+	#Only executes when the random number is a 2#
+	
+	#--Initialize and Draw Pickup TWO--#
+	#Random Number Generation#
+	li $v0, 42 #Generate random number with range, gives a random Y starting point for the leftmost unit#
+	li $a0, 0
+	li $a1, 31
+	syscall
+	#Set rest of coordinates from random Y#
+	li $a1, 7
+	jal set_coord
+	#Draw pickup one#
+	li $a0, 14
+	jal draw_obj
+	
+	#Make the pickup one active check to 1#
+	la $t1, PICKTWO_IS_ACTIVE
+	li $t2, 1
+	sw $t2, ($t1)
+
+no_pickup_2:
+
 #Erase Obstacle#
 erase_obs:
+	
 	#Erase OB1#
 	li $a0, 0
 	jal erase_obj
@@ -2991,13 +3655,35 @@ erase_obs:
 	la $t3, LIMIT
 	lw $t4, ($t3)
 	
-	ble $t2, $t4, update_obs #checks if the counter is greater than the limit
+	ble $t2, $t4, erase_pickups #checks if the counter is greater than the limit
 	
 	#Erase OB4#
 	li $a0, 10
 	jal erase_obj
 	#Erase OB5#
 	li $a0, 11
+	jal erase_obj
+
+erase_pickups:
+	
+	#Check if pick up one is active#
+	la $t1, PICKONE_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, erase_second_pickup #If pickup one is not active then jump
+	
+	#Erase Pickup One#
+	li $a0, 13
+	jal erase_obj
+	
+erase_second_pickup:	
+	
+	#Check if pick up two is active#
+	la $t1, PICKTWO_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, update_obs #If pickup one is active then jump
+	
+	#Erase Pickup Two#
+	li $a0, 14
 	jal erase_obj
 	
 #Update Obstacle#
@@ -3079,7 +3765,7 @@ check3_end:
 	la $t3, LIMIT
 	lw $t4, ($t3)
 	
-	ble $t2, $t4, er_ship #checks if the counter is greater than the limit
+	ble $t2, $t4, check_for_pickup_one #checks if the counter is greater than the limit
 	
 	#Check OB4#
 	la $t1, OB2_X_BIG
@@ -3124,6 +3810,55 @@ check5_end:
 	li $a0, 11
 	jal draw_obj
 
+check_for_pickup_one:
+	
+	#Check Pickup one#
+	la $t1, PICKONE_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, check_for_pickup_two #If pickup one is not active then jump
+	
+	
+	la $t1, PICK_UP_1_X
+	lw $t2, ($t1) #Get value of PICK_UP_1_X[0] which is the first unit this makes it less distracting#
+	bgez $t2, check6_end #if $t2 is greater than or equal zero#
+	
+	#deactivate pickup one
+	la $t1, PICKONE_IS_ACTIVE
+	sw $zero, ($t1)
+	
+	j check_for_pickup_two
+	
+check6_end: 
+
+
+	#Draw Obstacle#
+	li $a0, 13
+	jal draw_obj
+
+	
+check_for_pickup_two:
+	
+	#Check Pickup two#
+	la $t1, PICKTWO_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, er_ship #If pickup one is active then jump
+	
+	la $t1, PICK_UP_2_X
+	lw $t2, ($t1) #Get value of PICK_UP_1_X[0] which is the first unit this makes it less distracting#
+	bgez $t2, check7_end #if $t2 is greater than or equal zero#
+	
+	#deactivate pickup one
+	la $t1, PICKTWO_IS_ACTIVE
+	sw $zero, ($t1)
+	
+	j er_ship
+	
+check7_end: 
+
+	#Draw Obstacle#
+	li $a0, 14
+	jal draw_obj
+	
 #Erase Ship#
 er_ship:
 	li $a0, 5
@@ -3438,7 +4173,8 @@ no_bullet:
 	li $a0, 6
 	jal draw_obj
 	
-	
+
+
 SAFE:
 
 #Erase Health Bar#
@@ -3454,13 +4190,89 @@ SAFE:
 	li $a0, 8
 	jal draw_obj
 
+
+#Check for collisions on ship with pickups#
+	
+	#Check if pickup one is active#
+	la $t1, PICKONE_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, dont_check_for_collision #If pickup one is not active then jump
+	
+	li $a0, 0
+	jal check_pickup_collision
+	
+	bne $v0, 1, dont_check_for_collision
+	#Executes only if there is a hit#
+	
+	#Reset Health Bar#
+	la $t9, NUM_COLLISION
+	li $t8, 7
+	sw $t8, ($t9)
+	
+	#Set pickup one to not active#
+	la $t9, PICKONE_IS_ACTIVE
+	sw $zero, ($t9)
+	
+	#Erase Pickup One#
+	li $a0, 13
+	jal erase_obj
+	
+dont_check_for_collision:	
+	
+	#Check if pickup two is active#
+	la $t1, PICKTWO_IS_ACTIVE
+	lw $t2, ($t1)
+	beqz $t2, iterate_counter #If pickup one is active then jump
+	
+	li $a0, 1
+	jal check_pickup_collision
+	
+	bne $v0, 1, iterate_counter
+	#Executes only if there is a hit from pickup 2#
+	
+	#Get Current Count#
+	la $t1, COUNTER
+	lw $t2, ($t1)
+	
+	#Get Address of pickup two start time
+	la $t3, PICK_UP_2_START
+	#Set pickup 2 start time equal to the count#
+	sw $t2, ($t3)
+	
+	#Set Slow_Time to active#
+	la $t4, SLOW_TIME
+	li $t5, 1
+	sw $t5, ($t4)
+	
+	#Set Pickup Two to not active#
+	la $t1, PICKTWO_IS_ACTIVE
+	sw $zero, ($t1)
+	
+	#Erase Pickup Two#
+	li $a0, 14
+	jal erase_obj
+	
+	
+	
 #Iterate Counter by 1#
+iterate_counter:
 	la $t1, COUNTER
 	lw $t2, ($t1)
 	addi $t2, $t2, 1
 	sw $t2, ($t1)
 
+#Check if slowtime is active#
+	la $t1, SLOW_TIME
+	lw $t2, ($t1)
+	beqz $t2, normal_sleep 
+	
+	li $v0, 32
+	li $a0, 60
+	syscall
+	j game_loop	
+
 #sleep#
+normal_sleep:
 	li $v0, 32
 	li $a0, 40
 	syscall
@@ -3485,6 +4297,10 @@ GAME_OVER:
 	li $a0, 11
 	jal erase_obj
 	li $a0, 12
+	jal erase_obj
+	li $a0, 13
+	jal erase_obj
+	li $a0, 14
 	jal erase_obj
 	
 	#Draw Game Over#
