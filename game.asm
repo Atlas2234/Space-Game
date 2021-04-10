@@ -13,17 +13,17 @@
 #
 # Which milestones have been reached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# - Milestone 0
+# - Milestone 4
 #
 # Which approved features have been implemented for milestone 4?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
+# 1. Increase difficulty of game
+# 2. Shooting obstacles
+# 3. Pickups (two pickups one for slowing down time, one for repair ship)
 # 
 #
 # Link to video demonstration for final submission:
-# - (insert YouTube / MyMedia / other URL here). Make sure we can view it!
+# - https://youtu.be/1O_svbwvrLM
 #
 # Are you OK with us sharing the video with people outside course staff?
 # - Yes
